@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robô de Papelão — Projeto do 3º ano</title>
+<meta name="description" content="Robô de papelão com Arduino, sensores ultrassônicos e servomotores. Gire o modelo, veja por dentro e deixe sua avaliação.">
+<style>
+:root{
+  --bg:#0e151d; --bg2:#121c27; --panel:#17222f; --panel2:#1c2937; --line:#2a3a4c;
+  --ink:#edf2f7; --mut:#9db0c3; --card:#d3a560; --accent:#f0b24a; --accent-ink:#2a1c06;
+  --blue:#3b82f6; --ok:#34d399; --warn:#fbbf24; --bad:#f87171;
+  --r:16px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header.top{position:sticky;top:0;z-index:20;background:rgba(14,21,29,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;justify-content:space-between;height:60px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px;text-decoration:none}
+.brand i{display:inline-block;width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,#e0b46c,#b98846);box-shadow:inset 0 0 0 2px rgba(0,0,0,.18);position:relative}
+.brand i:before,.brand i:after{content:"";position:absolute;top:8px;width:6px;height:6px;border-radius:50%;background:#222;box-shadow:0 0 0 2px #aab}
+.brand i:before{left:4px}.brand i:after{right:4px}
+nav a{margin-left:20px;text-decoration:none;color:var(--mut);font-size:15px}
+nav a:hover{color:var(--ink)}
+@media(max-width:560px){nav a{margin-left:12px;font-size:14px}.brand span{display:none}}
+
+/* hero */
+.hero{padding:34px 0 20px}
+.hero-grid{display:grid;grid-template-columns:1.25fr 1fr;gap:28px;align-items:center}
+@media(max-width:900px){.hero-grid{grid-template-columns:1fr}}
+.eyebrow{display:inline-block;font-size:13px;font-weight:600;color:var(--accent);background:rgba(240,178,74,.1);border:1px solid rgba(240,178,74,.3);padding:4px 12px;border-radius:99px;letter-spacing:.3px}
+h1{font-size:clamp(30px,4.6vw,48px);line-height:1.1;margin:14px 0 14px;letter-spacing:-.5px}
+.lead{color:var(--mut);font-size:17.5px;margin:0 0 22px;max-width:46ch}
+.how{list-style:none;margin:0 0 22px;padding:0;display:grid;gap:10px;max-width:46ch}
+.how li{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.how b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:14px}
+.how strong{display:block;font-size:15px}
+.how span{color:var(--mut);font-size:14px}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+.btn{appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font:inherit;font-size:14.5px;font-weight:600;padding:9px 15px;border-radius:10px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn:hover{border-color:#44607d;background:#223244}
+.btn.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn:focus-visible,.star:focus-visible,input:focus-visible,textarea:focus-visible,.stage:focus-visible{outline:3px solid #7fb2ff;outline-offset:2px}
+
+/* viewer */
+.viewer{position:relative;border:1px solid var(--line);border-radius:22px;background:radial-gradient(120% 90% at 50% 20%,#223246 0%,#131d29 60%,#0f1620 100%);overflow:hidden}
+.stage{position:relative;height:min(62vh,540px);min-height:380px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;outline:none;perspective:1400px;perspective-origin:50% 42%}
+.stage.drag{cursor:grabbing}
+.chip{position:absolute;top:14px;left:14px;z-index:3;font-size:13px;font-weight:600;background:rgba(10,16,24,.7);border:1px solid var(--line);padding:5px 12px;border-radius:99px;color:var(--ink);pointer-events:none}
+.hint{position:absolute;top:14px;right:14px;z-index:3;font-size:12.5px;color:var(--mut);pointer-events:none;transition:opacity .4s}
+.hint.gone{opacity:0}
+.vbar{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-top:1px solid var(--line);background:rgba(10,16,24,.45);align-items:center}
+.vbar .sp{flex:1}
+.vbar .btn{padding:7px 12px;font-size:13.5px}
+.iconbtn{width:34px;height:34px;padding:0;justify-content:center;font-size:18px;line-height:1}
+
+/* 3D robot */
+.robot{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d;
+  transform:translateY(-6px) scale(var(--s,1)) rotateX(var(--rx,-14deg)) rotateY(var(--ry,-28deg))}
+.b{position:absolute;left:0;top:0;width:0;height:0;transform-style:preserve-3d}
+.f{position:absolute;backface-visibility:hidden;-webkit-backface-visibility:hidden;overflow:hidden;transition:opacity .45s}
+.f.edge{box-shadow:inset 0 0 0 2px rgba(104,66,24,.5),inset 0 0 14px rgba(104,66,24,.25)}
+.dot{position:absolute;border-radius:50%;pointer-events:none}
+.shadow{position:absolute;left:-190px;top:-150px;width:380px;height:300px;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(0,0,0,.5),rgba(0,0,0,0));transform:translate3d(0,154px,0) rotateX(90deg)}
+/* modo por dentro */
+.robot.open .body .f{opacity:.13;backface-visibility:visible;-webkit-backface-visibility:visible}
+.robot.open .body .f.top{opacity:0}
+.robot.open .body .f.inner{opacity:.08}
+.eye{position:absolute;width:42px;height:42px;border-radius:50%;
+  background:radial-gradient(circle,#10151a 0 30%,#9aa3ab 32% 46%,#1f252b 48% 58%,#d4d9de 60% 76%,#3b2e1a 78% 100%);
+  box-shadow:0 0 0 3px #7c5629,0 0 0 5px rgba(60,38,12,.5)}
+.eye:after{content:"";position:absolute;left:12px;top:10px;width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.35)}
+.barcode{position:absolute;background:repeating-linear-gradient(180deg,#1d2c4d 0 2px,transparent 2px 4px,#1d2c4d 4px 5px,transparent 5px 8px,#1d2c4d 8px 11px,transparent 11px 13px)}
+.print{position:absolute;color:#27447f;font-weight:800;font-family:Arial,Helvetica,sans-serif;white-space:nowrap;opacity:.9}
+.led{position:absolute;width:11px;height:11px;border-radius:50%}
+.tiny{position:absolute;font:700 7px/1 Arial,sans-serif;color:#fff;letter-spacing:.3px}
+
+/* sections */
+section.s{padding:56px 0}
+section.s.alt{background:var(--bg2);border-block:1px solid var(--line)}
+h2{font-size:clamp(24px,3.2vw,32px);margin:0 0 8px;letter-spacing:-.3px}
+.sub{color:var(--mut);margin:0 0 28px;max-width:62ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.comp{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.comp .ic{width:42px;height:42px;border-radius:11px;display:grid;place-items:center;font-size:21px;background:rgba(240,178,74,.12);margin-bottom:12px}
+.comp h3{margin:0 0 4px;font-size:16.5px}
+.comp p{margin:0;color:var(--mut);font-size:14.5px}
+.comp b{color:var(--accent);font-weight:700}
+
+/* avaliação */
+.rate-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:22px;align-items:start}
+@media(max-width:860px){.rate-grid{grid-template-columns:1fr}}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+label{display:block;font-weight:600;font-size:14.5px;margin:0 0 6px}
+input[type=text],textarea{width:100%;background:#0f1822;border:1px solid var(--line);color:var(--ink);font:inherit;padding:11px 13px;border-radius:10px}
+textarea{min-height:92px;resize:vertical}
+.field{margin-bottom:16px}
+.count{float:right;font-weight:400;color:var(--mut);font-size:12.5px}
+.stars{display:flex;gap:4px}
+.star{appearance:none;background:none;border:0;cursor:pointer;font-size:38px;line-height:1;color:#3a4b5e;padding:0 2px;transition:transform .1s,color .1s}
+.star.on{color:var(--accent)}
+.star:hover{transform:scale(1.12)}
+.starlabel{color:var(--mut);font-size:14px;margin-top:4px;min-height:21px}
+.msg{margin-top:14px;font-size:14.5px;min-height:22px}
+.msg.ok{color:var(--ok)}.msg.err{color:var(--bad)}
+.status{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--mut);margin-bottom:16px}
+.status i{width:9px;height:9px;border-radius:50%;background:var(--warn)}
+.status.on i{background:var(--ok)}.status.off i{background:var(--bad)}
+.sum{display:flex;gap:22px;align-items:center;margin-bottom:18px;flex-wrap:wrap}
+.avg{font-size:46px;font-weight:800;line-height:1;letter-spacing:-1px}
+.avg small{display:block;font-size:13px;color:var(--mut);font-weight:500;letter-spacing:0;margin-top:6px}
+.bars{flex:1;min-width:170px;display:grid;gap:4px}
+.bar{display:grid;grid-template-columns:18px 1fr 26px;gap:8px;align-items:center;font-size:12.5px;color:var(--mut)}
+.bar span.t{height:8px;border-radius:9px;background:#0f1822;overflow:hidden}
+.bar span.t i{display:block;height:100%;background:var(--accent);border-radius:9px}
+.list{display:grid;gap:10px;max-height:460px;overflow:auto;padding-right:4px}
+.rev{background:#121d29;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.rev .h{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+.rev .n{font-weight:700}
+.rev .st{color:var(--accent);letter-spacing:1px;font-size:14px}
+.rev .d{color:var(--mut);font-size:12.5px}
+.rev p{margin:6px 0 0;color:#cfd9e4;font-size:14.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.rev .pend{color:var(--warn);font-size:12px;font-weight:600}
+.empty{color:var(--mut);text-align:center;padding:26px 8px}
+footer{padding:30px 0 44px;color:var(--mut);font-size:14px;text-align:center;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#robo"><i></i><span id="brandName">Robô de Papelão</span></a>
+    <nav><a href="#robo">Robô</a><a href="#componentes">Componentes</a><a href="#avaliar">Avaliar</a></nav>
+  </div>
+</header>
+
+<main>
+<section class="hero" id="robo">
+  <div class="wrap hero-grid">
+    <div class="viewer">
+      <div class="stage" id="stage" tabindex="0" aria-label="Modelo 3D do robô. Arraste para girar, use as setas do teclado, + e − para zoom.">
+        <div class="chip" id="chip">Frente</div>
+        <div class="hint" id="hint">↔ arraste para girar</div>
+        <div class="robot" id="robot"></div>
+      </div>
+      <div class="vbar">
+        <button class="btn" data-view="front">Frente</button>
+        <button class="btn" data-view="left">Lado esq.</button>
+        <button class="btn" data-view="back">Atrás</button>
+        <button class="btn" data-view="right">Lado dir.</button>
+        <button class="btn" data-view="top">Cima</button>
+        <button class="btn" id="btnInside" aria-pressed="false">Raio-X</button>
+        <span class="sp"></span>
+        <button class="btn iconbtn" id="zoomOut" aria-label="Diminuir">−</button>
+        <button class="btn iconbtn" id="zoomIn" aria-label="Aumentar">+</button>
+        <button class="btn" id="btnAuto" aria-pressed="true">⟳ Girar</button>
+      </div>
+    </div>
+    <div>
+      <span class="eyebrow" id="eyebrow">Projeto do 3º ano</span>
+      <h1 id="titulo">Robô de Papelão</h1>
+      <p class="lead" id="descricao"></p>
+      <ol class="how" id="how"></ol>
+      <div class="btns">
+        <a class="btn primary" href="#avaliar">★ Avaliar o projeto</a>
+        <a class="btn" href="#componentes">Ver componentes</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="s alt" id="componentes">
+  <div class="wrap">
+    <h2>O que tem dentro dele</h2>
+    <p class="sub">Tudo montado à mão: estrutura de papelão reaproveitado, eletrônica de Arduino e movimento por servomotores.</p>
+    <div class="grid" id="compGrid"></div>
+  </div>
+</section>
+
+<section class="s" id="avaliar">
+  <div class="wrap">
+    <h2>Avalie o projeto</h2>
+    <p class="sub">Deixe sua nota e um comentário. Seu nome aparece na lista ao lado.</p>
+    <div class="rate-grid">
+      <form class="box" id="form" novalidate>
+        <div class="field">
+          <label id="lblNota">Sua nota</label>
+          <div class="stars" id="stars" role="radiogroup" aria-labelledby="lblNota"></div>
+          <div class="starlabel" id="starLabel"></div>
+        </div>
+        <div class="field">
+          <label for="nome">Seu nome</label>
+          <input type="text" id="nome" maxlength="60" autocomplete="name" placeholder="Ex.: Maria Silva" required>
+        </div>
+        <div class="field">
+          <label for="coment">Comentário <span class="count" id="cnt">0/300</span></label>
+          <textarea id="coment" maxlength="300" placeholder="O que você achou? (opcional)"></textarea>
+        </div>
+        <button class="btn primary" id="send" type="submit">Enviar avaliação</button>
+        <div class="msg" id="msg" role="status" aria-live="polite"></div>
+      </form>
+
+      <div class="box">
+        <div class="status" id="status"><i></i><span>Verificando…</span></div>
+        <div class="sum">
+          <div class="avg" id="avg">–<small id="total">0 avaliações</small></div>
+          <div class="bars" id="bars"></div>
+        </div>
+        <div class="list" id="list"></div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap" id="foot"></div></footer>
+
+<script>
+/* =====================================================================
+   CONFIGURAÇÃO — edite só esta parte
+   ===================================================================== */
+const CONFIG = {
+  titulo:   "Robô de Papelão",
+  eyebrow:  "Projeto do 3º ano",
+  descricao:"Um robô de papelão que dança a música da série La Casa de Papel. Passe a mão na frente dos olhos e ele começa a dançar; o sensor de cima faz ele parar. Feito com Arduino, sensores e servomotores. Arraste o modelo para girar e veja até por dentro.",
+  como: [
+    ["1","Passe a mão nos olhos","O sensor ultrassônico percebe a mão e o robô começa a dançar."],
+    ["2","Ele dança","Braços e pernas se mexem com os servomotores, no ritmo da música."],
+    ["3","Sensor de cima","O sensor de cima faz ele parar de dançar."]
+  ],
+  autores:  "Seu nome aqui",
+  escola:   "Nome da escola · Turma",
+
+  // Supabase: cole aqui (veja o LEIA-ME). Se ficar vazio, o site funciona em "modo local".
+  SUPABASE_URL:      "https://dveonontsmzymhdbdmlx.supabase.co",   // ex.: "https://abcdxyz.supabase.co"
+  SUPABASE_ANON_KEY: "sb_publishable_lC-C3ni2eGuMz4x5I6GBhg_z5Wwz17J",   // chave "anon" / "publishable" (pública)
+  TABELA: "avaliacoes",
+
+  componentes: [
+    {ic:"🧠", t:"Arduino Uno",            p:"O cérebro: lê os sensores e comanda os motores."},
+    {ic:"👀", t:"Sensor ultrassônico (olhos)",p:"Percebe a mão passando na frente e faz o robô começar a dançar."},
+    {ic:"🦾", t:"Micro servos SG90",       p:"Movem os braços e as pernas na dança."},
+    {ic:"🔌", t:"Protoboard e jumpers",    p:"Ligam tudo sem precisar de solda."},
+    {ic:"📡", t:"Sensor de cima",          p:"Faz o robô parar de dançar."},
+    {ic:"📦", t:"Papelão e palitos",       p:"Corpo de caixa reaproveitada, braços de palito de bambu."}
+  ]
+};
+
+/* =====================================================================
+   TEXTOS
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+document.title = CONFIG.titulo + " — " + CONFIG.eyebrow;
+$("#titulo").textContent = CONFIG.titulo; $("#brandName").textContent = CONFIG.titulo;
+$("#eyebrow").textContent = CONFIG.eyebrow; $("#descricao").textContent = CONFIG.descricao;
+$("#foot").textContent = "Feito por " + CONFIG.autores + " · " + CONFIG.escola;
+(CONFIG.como||[]).forEach(([n,t,d])=>{const li=document.createElement("li");li.innerHTML="<b></b><div><strong></strong><span></span></div>";li.querySelector("b").textContent=n;li.querySelector("strong").textContent=t;li.querySelector("span").textContent=d;$("#how").appendChild(li);});
+CONFIG.componentes.forEach(c=>{
+  const d=document.createElement("div"); d.className="comp";
+  d.innerHTML='<div class="ic"></div><h3></h3><p></p>';
+  d.children[0].textContent=c.ic; d.children[1].textContent=c.t; d.children[2].textContent=c.p;
+  $("#compGrid").appendChild(d);
+});
+
+/* =====================================================================
+   ROBÔ 3D (CSS puro — funciona offline)
+   Eixos: x → direita, y ↓ baixo, z → para quem olha.
+   ===================================================================== */
+const robot = $("#robot");
+const el = (t,c)=>{const e=document.createElement(t); if(c) e.className=c; return e;};
+
+function box(parent,o){
+  const {w,h,d,x=0,y=0,z=0,c={},html={},edge=true,skip=[],inner=null}=o;
+  const b=el("div","b "+(o.cls||"")); b.style.transform=`translate3d(${x}px,${y}px,${z}px)`;
+  const faces={
+    front:[w,h,`translateZ(${d/2}px)`], back:[w,h,`rotateY(180deg) translateZ(${d/2}px)`],
+    right:[d,h,`rotateY(90deg) translateZ(${w/2}px)`], left:[d,h,`rotateY(-90deg) translateZ(${w/2}px)`],
+    top:[w,d,`rotateX(90deg) translateZ(${h/2}px)`], bottom:[w,d,`rotateX(-90deg) translateZ(${h/2}px)`]
+  };
+  for(const [n,[fw,fh,t]] of Object.entries(faces)){
+    if(skip.includes(n)) continue;
+    const f=el("div","f "+n+(edge?" edge":""));
+    f.style.cssText=`width:${fw}px;height:${fh}px;left:${-fw/2}px;top:${-fh/2}px;transform:${t};background:${c[n]||c.all||"#888"}`;
+    if(html[n]) f.appendChild(html[n]);
+    b.appendChild(f);
+    if(inner){ // parede por dentro (visível só de dentro da caixa)
+      const g=el("div","f inner");
+      g.style.cssText=`width:${fw}px;height:${fh}px;left:${-fw/2}px;top:${-fh/2}px;transform:${t} translateZ(-2px) rotateY(180deg);background:${inner[n]||inner.all}`;
+      b.appendChild(g);
+    }
+  }
+  parent.appendChild(b); return b;
+}
+const abs=(css,cls="",txt="")=>{const e=el("div",cls); e.style.cssText="position:absolute;"+css; if(txt) e.textContent=txt; return e;};
+const wrapEl=(...kids)=>{const e=el("div"); e.style.cssText="position:absolute;inset:0"; kids.forEach(k=>e.appendChild(k)); return e;};
+const stripes=(dir,base,a=.2,g=7)=>`repeating-linear-gradient(${dir},rgba(120,78,28,${a}) 0 2px,transparent 2px ${g}px),${base}`;
+
+/* dimensões do corpo */
+const W=150,H=185,D=120;
+
+/* ---- sombra ---- */
+robot.appendChild(el("div","shadow"));
+
+/* ---- corpo (caixa de papelão) ---- */
+const body=el("div","b body"); robot.appendChild(body);
+
+/* buraco irregular recortado no papelão (um por olho) */
+function ragged(cx,cy,r,jit,color,seed){
+  let s=seed; const rnd=()=>{s=(s*16807)%2147483647;return s/2147483647;};
+  const pts=[]; for(let i=0;i<22;i++){const a=i/22*Math.PI*2, k=r+(rnd()-.5)*jit*2; pts.push(`${(50+Math.cos(a)*k/r*50).toFixed(1)}% ${(50+Math.sin(a)*k/r*50).toFixed(1)}%`);}
+  return abs(`position:absolute;left:${cx-r}px;top:${cy-r}px;width:${r*2}px;height:${r*2}px;background:${color};clip-path:polygon(${pts.join(",")})`);
+}
+const EYE_X=26, EYE_CY=70;
+const frontHTML=wrapEl(
+  ragged(75-EYE_X,EYE_CY,31,3.5,"#a87a38",11), ragged(75+EYE_X,EYE_CY,31,3.5,"#a87a38",23),   // borda de papelão rasgado
+  ragged(75-EYE_X,EYE_CY,27,2.5,"#2b1c0a",5),  ragged(75+EYE_X,EYE_CY,27,2.5,"#2b1c0a",17),  // buraco escuro
+  abs("left:18px;top:114px;width:62px;height:56px","barcode"),
+  abs("left:104px;top:106px;transform:rotate(90deg);transform-origin:0 0;font-size:12px;letter-spacing:1px","print","6M 23:13"),
+  abs("left:18px;top:14px;font-size:15px","print","TRO"),
+  abs("right:8px;top:30px;writing-mode:vertical-rl;font-size:10px;letter-spacing:1px","print","VÁLIDO A PARTIR DA")
+);
+const topHTML=wrapEl(
+  abs("left:62px;top:18px;width:44px;height:44px;background:#26468a;opacity:.9;transform:skewX(-12deg)"),
+  abs("left:14px;top:68px;font-size:25px;font-style:italic;transform:rotate(-3deg);text-shadow:0 0 1px #27447f","print","Deterge"),
+  abs("left:14px;top:106px;width:112px;height:5px;background:#27447f;transform:rotate(-6deg);opacity:.9"),
+  abs("left:112px;top:14px;background:radial-gradient(circle at 35% 35%,#555,#0b0b0b)","led"),
+  abs("left:92px;top:14px;background:radial-gradient(circle at 35% 35%,#fff,#b9d3d8)","led")
+);
+const rightHTML=wrapEl(abs("left:20px;top:9px;width:24px;height:15px;background:#2a1b0a;border-radius:2px;box-shadow:inset 0 2px 5px #000"));
+
+box(body,{w:W,h:H,d:D,cls:"body",skip:["back"],c:{
+  front:"linear-gradient(160deg,#dcae68,#c99a52)",
+  left:stripes("90deg","#c39650",.22,6),
+  right:stripes("180deg","#b98846",.2,8),
+  top:"linear-gradient(160deg,#e6bf7e,#d6aa62)",
+  bottom:"#7d5822"},
+  inner:{all:"linear-gradient(160deg,#a9793a,#8f6329)",left:stripes("90deg","#9d6f33",.25,6),right:stripes("180deg","#9d6f33",.25,8)},
+  html:{front:frontHTML,top:topHTML,right:rightHTML}});
+
+/* borda de papelão da abertura traseira (corte da caixa) */
+const cut="repeating-linear-gradient(90deg,#7e5522 0 2px,#d2a35e 2px 4px)", cutV="repeating-linear-gradient(180deg,#7e5522 0 2px,#d2a35e 2px 4px)";
+box(body,{w:W,h:3,d:3,x:0,y:-H/2+1.5,z:-D/2+1.5,c:{all:cut},edge:false});
+box(body,{w:W,h:3,d:3,x:0,y:H/2-1.5,z:-D/2+1.5,c:{all:cut},edge:false});
+box(body,{w:3,h:H,d:3,x:-W/2+1.5,y:0,z:-D/2+1.5,c:{all:cutV},edge:false});
+box(body,{w:3,h:H,d:3,x:W/2-1.5,y:0,z:-D/2+1.5,c:{all:cutV},edge:false});
+
+/* sensor ultrassônico HC-SR04: placa azul + 2 transdutores cilíndricos de alumínio */
+function eye3d(x,y){
+  const z0=D/2-11, n=17, R=21;
+  for(let i=0;i<n;i++){
+    const last=i===n-1, flange=i<2, d=el("div","b"), r=flange?R+3:R;
+    d.style.transform=`translate3d(${x}px,${y}px,${z0+i*1.25}px)`;
+    const f=el("div","disc");
+    f.style.cssText=`position:absolute;width:${r*2}px;height:${r*2}px;left:${-r}px;top:${-r}px;border-radius:50%;backface-visibility:hidden;`+
+      (last
+        ? "background:radial-gradient(circle,#0a0d10 0 8%,#aab2b9 10% 34%,#6d767e 36% 50%,#0b0e11 52% 58%,#d6dce1 60% 78%,#8a939b 80% 94%,#5a6269 96% 100%);box-shadow:0 0 0 1.5px #4d555c"
+        : flange ? "background:#2f343a;box-shadow:0 0 0 1px #15181b"
+                 : `background:${i%2?"#b3bac1":"#98a0a8"};box-shadow:0 0 0 1px #646c73`);
+    if(last){
+      const mesh=el("div"); mesh.style.cssText="position:absolute;left:10px;top:10px;width:22px;height:22px;border-radius:50%;background:repeating-radial-gradient(circle,rgba(0,0,0,.38) 0 .9px,transparent .9px 2.4px);mix-blend-mode:multiply";
+      const hl=el("div"); hl.style.cssText="position:absolute;left:8px;top:6px;width:12px;height:6px;border-radius:50%;background:rgba(255,255,255,.4);transform:rotate(-32deg)";
+      f.appendChild(mesh); f.appendChild(hl);
+    }
+    d.appendChild(f); body.appendChild(d);
+  }
+}
+eye3d(-EYE_X,-H/2+EYE_CY); eye3d(EYE_X,-H/2+EYE_CY);
+
+/* ---- servos ---- */
+function servo(parent,x,y,z,sx,sy,sz){
+  const lab=wrapEl(abs("left:50%;top:50%;width:70%;height:46%;transform:translate(-50%,-50%);background:#f2c230;border-radius:1px"));
+  return box(parent,{w:sx,h:sy,d:sz,x,y,z,c:{all:"linear-gradient(160deg,#4a86f0,#2653b8)",top:"linear-gradient(160deg,#5b94f7,#2b5ec7)"},html:{top:lab,front:lab.cloneNode(true)},edge:false});
+}
+const bamboo={all:"linear-gradient(90deg,#f1dfa8,#dcc07a)"};
+const horn={all:"#f4f4f2"};
+
+[-1,1].forEach(s=>{
+  const sx=s*(W/2+14);
+  servo(robot,sx,-12,0,28,22,38);                        // servo do braço
+  box(robot,{w:8,h:9,d:9,x:s*(W/2+32),y:-12,z:0,c:horn,edge:false}); // horn
+  // braço: dois palitos paralelos que saem e sobem
+  [-4,6].forEach(dz=>{
+    box(robot,{w:50,h:6,d:6,x:s*(W/2+62),y:-12,z:dz,c:bamboo,edge:false});
+    box(robot,{w:6,h:38,d:6,x:s*(W/2+84),y:-12-16,z:dz,c:bamboo,edge:false});
+  });
+  [-4,6].forEach(dz=>box(robot,{w:6,h:14,d:6,x:s*(W/2+74),y:-40,z:dz,c:bamboo,edge:false}));
+  // perna: servo + horn + pé de papelão
+  const lx=s*38;
+  servo(robot,lx,H/2+15,0,22,30,22);
+  box(robot,{w:8,h:10,d:8,x:lx,y:H/2+35,z:0,c:horn,edge:false});
+  box(robot,{w:66,h:13,d:80,x:lx,y:H/2+46,z:4,c:{
+    all:stripes("180deg","#c79b57",.3,4), top:"linear-gradient(160deg,#dcb06a,#c9a05a)",bottom:"#7d5822"}});
+});
+
+/* ---- cabo USB azul (esferas sempre viradas p/ câmera) ---- */
+const bez=(p,t)=>{const u=1-t;return p[0].map((_,i)=>u*u*u*p[0][i]+3*u*u*t*p[1][i]+3*u*t*t*p[2][i]+t*t*t*p[3][i]);};
+function chain(parent,pts,color,n,size){
+  for(let i=0;i<=n;i++){
+    const [x,y,z]=bez(pts,i/n); const d=el("div","dot");
+    d.style.cssText=`width:${size}px;height:${size}px;left:${-size/2}px;top:${-size/2}px;background:radial-gradient(circle at 35% 30%,${color[0]},${color[1]});`+
+      `transform:translate3d(${x}px,${y}px,${z}px) rotateY(calc(var(--ry)*-1)) rotateX(calc(var(--rx)*-1))`;
+    parent.appendChild(d);
+  }
+}
+chain(robot,[[W/2-2,-78,32],[150,-96,46],[142,60,72],[68,148,96]],["#6aa6ff","#1f55c9"],46,9);
+box(robot,{w:16,h:9,d:22,x:60,y:148,z:104,c:{all:"linear-gradient(160deg,#5b94f7,#2b5ec7)",front:"#c9ced3"},edge:false});
+
+/* ---- interior (visível pela parte de trás aberta) ---- */
+const inner=el("div","b"); robot.appendChild(inner);
+// placa do sensor (HC-SR04) atrás dos olhos, na parede da frente
+const sPin=wrapEl(
+  abs("position:absolute;left:50%;top:50%;width:26px;height:14px;transform:translate(-50%,-50%);background:#c9ced3;border-radius:7px;opacity:.9"),
+  abs("position:absolute;left:5px;bottom:3px","tiny","HC-SR04")
+);
+const sY=-H/2+EYE_CY;
+box(inner,{w:90,h:44,d:3,x:0,y:sY,z:D/2-12,c:{all:"#0f4a9e",back:"linear-gradient(160deg,#1b72d6,#0f56b4)"},html:{back:sPin},edge:false});
+box(inner,{w:26,h:8,d:5,x:0,y:sY+25,z:D/2-12,c:{all:"repeating-linear-gradient(90deg,#1a1a1a 0 4px,#444 4px 6px)"},edge:false}); // pinos VCC TRIG ECHO GND
+
+// Arduino Uno deitado no topo da caixa (componentes e conectores para baixo)
+const UX=-4, UY=-H/2+10, UZ=8;
+box(inner,{w:92,h:3,d:71,x:UX,y:UY,z:UZ,c:{all:"#0f4f7c",bottom:"linear-gradient(160deg,#1f78b0,#145184)"},edge:false});
+const unoHeader=(z)=>box(inner,{w:70,h:9,d:4,x:UX-6,y:UY+6,z,c:{all:"#16181b",front:"repeating-linear-gradient(90deg,#16181b 0 5px,#3a3f45 5px 7px)",back:"repeating-linear-gradient(90deg,#16181b 0 5px,#3a3f45 5px 7px)"},edge:false});
+unoHeader(UZ-24); unoHeader(UZ+32);
+box(inner,{w:16,h:11,d:16,x:UX+37,y:UY+7,z:UZ+16,c:{all:"linear-gradient(160deg,#dfe3e7,#9aa3ab)"},edge:false});   // USB-B
+box(inner,{w:18,h:12,d:18,x:UX+37,y:UY+7.5,z:UZ-14,c:{all:"#1b1d20"},edge:false});                                // jack DC
+box(inner,{w:34,h:5,d:12,x:UX-8,y:UY+4,z:UZ+4,c:{all:"#14171a"},edge:false});                                     // ATmega
+box(inner,{w:6,h:4,d:6,x:UX+18,y:UY+3.5,z:UZ-2,c:{all:"#c0392b"},edge:false});                                    // reset
+// módulo infravermelho (VCC GND OUT)
+const irHTML=wrapEl(abs("position:absolute;left:7px;top:8px;width:12px;height:12px;border-radius:50%;background:#16191f;box-shadow:0 0 0 2px #aab"),abs("position:absolute;left:3px;bottom:3px","tiny","VCC GND OUT"));
+box(inner,{w:30,h:36,d:3,x:55,y:-58,z:D/2-8,c:{all:"#1c58c9",back:"#2166e0"},html:{back:irHTML},edge:false});
+// protoboard no fundo
+const pb=abs("position:absolute;inset:0;background:radial-gradient(circle,#9aa 0 1px,transparent 1.6px) 0 0/7px 7px,#f1f2ef");
+box(inner,{w:124,h:9,d:70,x:0,y:H/2-6,z:-8,c:{all:"#dcdedb",top:"#f1f2ef"},html:{top:pb},edge:false});
+// fios
+(function(){
+  let s=7; const rnd=()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+  const cols=[["#ffb340","#d97706"],["#ffe14a","#c9a500"],["#6aa6ff","#1f55c9"],["#3ccf8e","#0f7a4d"],["#ff6a55","#b3261e"],["#a9764a","#5a3a1c"],["#b39ae6","#6a4fb3"],["#ffffff","#b8bec4"]];
+  for(let i=0;i<16;i++){            // Uno → protoboard
+    const ax=UX-40+rnd()*66, bx=-52+rnd()*104, bz=-30+rnd()*34;
+    chain(inner,[[ax,UY+10,UZ-24],[ax+(rnd()-.5)*40,-45,UZ-34-rnd()*10],[bx+(rnd()-.5)*40,30+rnd()*30,bz-6-rnd()*14],[bx,H/2-12,bz]],cols[i%cols.length],22,4);
+  }
+  for(let i=0;i<4;i++){             // sensor → protoboard
+    const px=-9+i*6, bx=-24+i*16;
+    chain(inner,[[px,sY+28,D/2-12],[px+(i-1.5)*8,30,36],[bx,60,14],[bx,H/2-12,10]],cols[(i*2+1)%cols.length],18,4);
+  }
+  chain(inner,[[55,-44,D/2-11],[70,-10,34],[44,45,6],[26,H/2-12,-4]],["#ffb340","#d97706"],16,4); // módulo IR
+  // cabo USB (azul) entrando pelo furo da lateral até a porta do Uno
+  chain(inner,[[W/2-1,-78,31],[66,-79,30],[56,-80,26],[UX+45,UY+7,UZ+16]],["#6aa6ff","#1f55c9"],10,7);
+})();
+
+/* =====================================================================
+   CONTROLES DE ROTAÇÃO
+   ===================================================================== */
+const stage=$("#stage"), chip=$("#chip"), hint=$("#hint");
+const st={ry:-28,rx:-14,s:1,zoom:1,vel:0,auto:!matchMedia("(prefers-reduced-motion:reduce)").matches,drag:false,tw:null};
+const VIEWS={front:[0,-10],left:[90,-10],back:[180,-10],right:[-90,-10],top:[0,-90]};
+
+function fit(){const r=stage.getBoundingClientRect();st.base=Math.min(r.width/470,r.height/430);}
+function paint(){
+  robot.style.setProperty("--ry",st.ry+"deg"); robot.style.setProperty("--rx",st.rx+"deg");
+  robot.style.setProperty("--s",(st.base*st.zoom).toFixed(3));
+  let a=((st.ry%360)+540)%360-180, label;
+  if(st.rx<-62) label="Vista de cima";
+  else if(Math.abs(a)<45) label="Frente";
+  else if(Math.abs(a)>135) label="Atrás";
+  else label=a>0?"Lado esquerdo":"Lado direito";
+  if(robot.classList.contains("open")) label+=" · raio-X";
+  if(chip.textContent!==label) chip.textContent=label;
+  document.querySelectorAll("[data-view]").forEach(b=>{
+    const [vy,vx]=VIEWS[b.dataset.view]; let da=Math.abs(((st.ry-vy)%360+540)%360-180);
+    b.classList.toggle("on", b.dataset.view==="top"? st.rx<-62 : (da<30 && st.rx>=-62));
+  });
+}
+function goTo(ry,rx){
+  st.auto=false; syncAuto(); st.vel=0;
+  const cur=st.ry, diff=((ry-cur)%360+540)%360-180;
+  st.tw={t0:performance.now(),dur:650,ry0:cur,dry:diff,rx0:st.rx,drx:rx-st.rx};
+}
+function syncAuto(){const b=$("#btnAuto"); b.classList.toggle("on",st.auto); b.setAttribute("aria-pressed",st.auto);}
+function tick(now){
+  if(st.tw){
+    const k=Math.min(1,(now-st.tw.t0)/st.tw.dur), e=1-Math.pow(1-k,3);
+    st.ry=st.tw.ry0+st.tw.dry*e; st.rx=st.tw.rx0+st.tw.drx*e; if(k>=1) st.tw=null;
+  } else if(!st.drag){
+    if(Math.abs(st.vel)>.02){st.ry+=st.vel; st.vel*=.94;}
+    else if(st.auto){st.ry+=.35;}
+  }
+  paint(); requestAnimationFrame(tick);
+}
+let last=null;
+stage.addEventListener("pointerdown",e=>{
+  st.drag=true; st.tw=null; st.vel=0; last=[e.clientX,e.clientY]; stage.classList.add("drag");
+  stage.setPointerCapture(e.pointerId); hint.classList.add("gone");
+  if(st.auto){st.auto=false; syncAuto();}
+});
+stage.addEventListener("pointermove",e=>{
+  if(!st.drag) return;
+  const dx=e.clientX-last[0], dy=e.clientY-last[1]; last=[e.clientX,e.clientY];
+  st.ry+=dx*.55; st.vel=dx*.55; st.rx=Math.max(-90,Math.min(25,st.rx-dy*.45));
+});
+const endDrag=()=>{st.drag=false; stage.classList.remove("drag");};
+stage.addEventListener("pointerup",endDrag); stage.addEventListener("pointercancel",endDrag);
+stage.addEventListener("wheel",e=>{e.preventDefault(); zoom(e.deltaY<0?1.08:1/1.08);},{passive:false});
+stage.addEventListener("keydown",e=>{
+  const m={ArrowLeft:()=>st.ry-=8,ArrowRight:()=>st.ry+=8,ArrowUp:()=>st.rx=Math.max(-90,st.rx-6),ArrowDown:()=>st.rx=Math.min(25,st.rx+6),"+":()=>zoom(1.1),"=":()=>zoom(1.1),"-":()=>zoom(1/1.1)};
+  if(m[e.key]){e.preventDefault(); st.auto=false; syncAuto(); m[e.key]();}
+});
+function zoom(f){st.zoom=Math.max(.55,Math.min(2,st.zoom*f));}
+$("#zoomIn").onclick=()=>zoom(1.15); $("#zoomOut").onclick=()=>zoom(1/1.15);
+$("#btnAuto").onclick=()=>{st.auto=!st.auto; st.tw=null; syncAuto();};
+document.querySelectorAll("[data-view]").forEach(b=>b.onclick=()=>{const [ry,rx]=VIEWS[b.dataset.view]; goTo(ry,rx);});
+$("#btnInside").onclick=function(){
+  const on=robot.classList.toggle("open"); this.classList.toggle("on",on); this.setAttribute("aria-pressed",on);
+  if(on) goTo(-24,-48); else goTo(-28,-14);
+};
+addEventListener("resize",fit); fit(); syncAuto(); requestAnimationFrame(tick);
+setTimeout(()=>hint.classList.add("gone"),7000);
+
+/* =====================================================================
+   AVALIAÇÕES  (Supabase via REST — sem biblioteca; modo local como reserva)
+   ===================================================================== */
+const SB = CONFIG.SUPABASE_URL.replace(/\/+$/,"");
+const HAS_SB = !!(SB && CONFIG.SUPABASE_ANON_KEY);
+const LS_LOCAL="robo_aval_local_v1", LS_PEND="robo_aval_pend_v1";
+const store={get:(k)=>{try{return JSON.parse(localStorage.getItem(k)||"[]")}catch(e){return[]}},set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const hdr=()=>{const h={apikey:CONFIG.SUPABASE_ANON_KEY,"Content-Type":"application/json"};
+  if(CONFIG.SUPABASE_ANON_KEY.startsWith("eyJ")) h.Authorization="Bearer "+CONFIG.SUPABASE_ANON_KEY; return h;};
+const url=()=>`${SB}/rest/v1/${encodeURIComponent(CONFIG.TABELA)}`;
+
+async function sbList(){
+  const r=await fetch(url()+"?select=id,nome,nota,comentario,created_at&order=created_at.desc&limit=200",{headers:hdr()});
+  if(!r.ok) throw new Error("list "+r.status); return r.json();
+}
+async function sbInsert(a){
+  const r=await fetch(url(),{method:"POST",headers:{...hdr(),Prefer:"return=minimal"},body:JSON.stringify({nome:a.nome,nota:a.nota,comentario:a.comentario||null})});
+  if(!r.ok) throw new Error("insert "+r.status);
+}
+let online=null;
+function setStatus(kind,text){const s=$("#status"); s.className="status "+kind; s.lastElementChild.textContent=text;}
+
+async function syncPending(){
+  if(!HAS_SB) return;
+  let p=store.get(LS_PEND); if(!p.length) return;
+  const rest=[];
+  for(const a of p){try{await sbInsert(a);}catch(e){rest.push(a);}}
+  store.set(LS_PEND,rest);
+}
+async function load(){
+  let rows=[], pend=[];
+  if(HAS_SB){
+    try{
+      await syncPending();
+      rows=await sbList(); online=true;
+      setStatus("on","Conectado ao Supabase · avaliações em tempo real");
+    }catch(e){
+      online=false; setStatus("off","Sem conexão com o Supabase · mostrando só o que está salvo aqui");
+    }
+    pend=store.get(LS_PEND).map(a=>({...a,pendente:true}));
+  } else {
+    rows=store.get(LS_LOCAL);
+    setStatus("","Modo local · Supabase não configurado (as notas ficam só neste navegador)");
+  }
+  render([...pend,...rows]);
+}
+function stars(n){return "★".repeat(n)+"☆".repeat(5-n);}
+function render(rows){
+  const list=$("#list"); list.textContent="";
+  const real=rows.filter(r=>!r.pendente), n=real.length;
+  const avg=n?real.reduce((s,r)=>s+r.nota,0)/n:0;
+  $("#avg").firstChild.textContent=n?avg.toFixed(1).replace(".",","):"–";
+  $("#total").textContent=n+(n===1?" avaliação":" avaliações");
+  const bars=$("#bars"); bars.textContent="";
+  for(let k=5;k>=1;k--){
+    const c=real.filter(r=>r.nota===k).length, pct=n?c/n*100:0;
+    const b=el("div","bar"); b.innerHTML='<span></span><span class="t"><i></i></span><span style="text-align:right"></span>';
+    b.children[0].textContent=k; b.children[1].firstChild.style.width=pct+"%"; b.children[2].textContent=c; bars.appendChild(b);
+  }
+  if(!rows.length){const e=el("div","empty"); e.textContent="Ainda não há avaliações. Seja o primeiro!"; list.appendChild(e); return;}
+  rows.forEach(r=>{
+    const d=el("div","rev"); d.innerHTML='<div class="h"><span class="n"></span><span class="st"></span></div><div class="d"></div>';
+    d.querySelector(".n").textContent=r.nome; d.querySelector(".st").textContent=stars(r.nota);
+    const when=r.created_at?new Date(r.created_at).toLocaleString("pt-BR",{dateStyle:"short",timeStyle:"short"}):"";
+    d.querySelector(".d").textContent=when;
+    if(r.pendente){const p=el("span","pend"); p.textContent=" · aguardando internet para enviar"; d.querySelector(".d").appendChild(p);}
+    if(r.comentario){const p=el("p"); p.textContent=r.comentario; d.appendChild(p);}
+    list.appendChild(d);
+  });
+}
+
+/* formulário */
+let nota=0;
+const LBL=["","Ruim","Regular","Bom","Muito bom","Excelente!"];
+const starsBox=$("#stars");
+for(let i=1;i<=5;i++){
+  const b=el("button","star"); b.type="button"; b.textContent="★"; b.setAttribute("role","radio"); b.setAttribute("aria-checked","false"); b.setAttribute("aria-label",i+(i===1?" estrela":" estrelas"));
+  b.onclick=()=>setNota(i); b.onmouseenter=()=>paintStars(i); b.onmouseleave=()=>paintStars(nota);
+  starsBox.appendChild(b);
+}
+function paintStars(n){[...starsBox.children].forEach((b,i)=>b.classList.toggle("on",i<n)); $("#starLabel").textContent=LBL[n]||"";}
+function setNota(n){nota=n; [...starsBox.children].forEach((b,i)=>b.setAttribute("aria-checked",i+1===n)); paintStars(n);}
+$("#coment").addEventListener("input",e=>$("#cnt").textContent=e.target.value.length+"/300");
+
+$("#form").addEventListener("submit",async e=>{
+  e.preventDefault();
+  const msg=$("#msg"), nome=$("#nome").value.trim(), comentario=$("#coment").value.trim();
+  const say=(t,k)=>{msg.textContent=t; msg.className="msg "+(k||"");};
+  if(!nota) return say("Escolha uma nota de 1 a 5 estrelas.","err");
+  if(!nome) {$("#nome").focus(); return say("Digite seu nome.","err");}
+  const btn=$("#send"); btn.disabled=true; say("Enviando…");
+  const a={nome:nome.slice(0,60),nota,comentario:comentario.slice(0,300)};
+  try{
+    if(HAS_SB){
+      try{await sbInsert(a); say("Obrigado! Sua avaliação foi enviada. ✔","ok");}
+      catch(err){
+        if(navigator.onLine===false || err instanceof TypeError){
+          store.set(LS_PEND,[...store.get(LS_PEND),{...a,created_at:new Date().toISOString()}]);
+          say("Sem internet agora. Sua avaliação ficou salva e será enviada automaticamente quando a conexão voltar.","ok");
+        } else throw err;
+      }
+    } else {
+      store.set(LS_LOCAL,[{...a,id:Date.now(),created_at:new Date().toISOString()},...store.get(LS_LOCAL)]);
+      say("Obrigado! Avaliação salva (modo local).","ok");
+    }
+    $("#form").reset(); setNota(0); $("#cnt").textContent="0/300";
+    await load();
+  }catch(err){say("Não foi possível enviar agora. Tente de novo em instantes.","err");}
+  setTimeout(()=>btn.disabled=false,2500);
+});
+addEventListener("online",load);
+load();
+</script>
+</body>
+</html>

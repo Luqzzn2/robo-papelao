@@ -1,0 +1,50 @@
+SITE DO ROBÔ DE PAPELÃO
+=======================
+
+ARQUIVOS
+  index.html    -> o site inteiro (é só abrir com duplo clique, no Chrome/Edge/Firefox)
+  supabase.sql  -> cria a tabela de avaliações no Supabase
+  LEIA-ME.txt   -> este guia
+
+O QUE FUNCIONA SEM INTERNET
+  O robô 3D (girar, zoom, frente/lados/atrás/cima, "por dentro") é feito só com HTML e CSS.
+  Não usa nenhuma biblioteca nem imagem externa: funciona offline.
+  Só a avaliação precisa de internet. Se a internet cair na hora, a nota fica salva no
+  navegador e é enviada sozinha quando a conexão voltar.
+
+1) EDITAR OS TEXTOS (2 minutos)
+  Abra index.html no Bloco de Notas (ou VS Code) e procure por:  CONFIG
+  Troque: titulo, descricao, autores e escola. Dá pra mudar os cartões de componentes também.
+
+2) LIGAR O SUPABASE (5 minutos)
+  a. Entre em supabase.com e crie uma conta (pode ser com o GitHub). Clique em "New project".
+  b. Quando o projeto abrir, vá em "SQL Editor" > "New query".
+     Cole o conteúdo de supabase.sql e clique em "Run". Deve aparecer "Success".
+  c. Vá em "Project Settings" (engrenagem) > "API" (ou "API Keys").
+     Copie:
+       - Project URL                  (ex.: https://abcdxyz.supabase.co)
+       - a chave "anon" / "publishable" (a PÚBLICA; nunca use a "service_role"/"secret")
+  d. No index.html, dentro do CONFIG, cole nos campos:
+       SUPABASE_URL:      "https://abcdxyz.supabase.co",
+       SUPABASE_ANON_KEY: "sua-chave-publica",
+  e. Salve e abra o site. No quadro de avaliações deve aparecer a bolinha verde
+     "Conectado ao Supabase". Faça uma avaliação de teste.
+
+  Ver as avaliações: no Supabase, menu "Table Editor" > avaliacoes (lista com nome, nota,
+  comentário e data). O próprio site também mostra a lista, a média e o gráfico de notas.
+  Apagar uma avaliação de teste: pelo Table Editor (o site não consegue apagar, de propósito).
+
+  Se a bolinha ficar vermelha: confira a URL e a chave (sem espaços/aspas faltando) e se o
+  SQL rodou com sucesso. Enquanto o Supabase não estiver configurado, o site funciona em
+  "modo local" (as notas ficam só naquele navegador).
+
+3) PARA OUTRAS PESSOAS AVALIAREM (celular delas)
+  Abrir o arquivo no seu computador não deixa os outros acessarem. Para isso, publique o
+  index.html de graça em: Netlify Drop (app.netlify.com/drop), GitHub Pages ou Cloudflare
+  Pages. No Netlify Drop é só arrastar a pasta. Depois gere um QR Code do link para
+  mostrar na apresentação.
+
+DICAS PARA A APRESENTAÇÃO
+  - Teclas: setas giram o robô, + e - dão zoom (clique no robô antes).
+  - A parte de trás do robô é aberta: gire até "Atrás" para ver Arduino, protoboard e fios. O botão "Raio-X" deixa as paredes transparentes.
+  - Teste tudo com a internet da escola ANTES. Se ela falhar, o robô continua funcionando.
